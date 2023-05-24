@@ -1523,10 +1523,7 @@
       "__uuid__": "6f01cf7f-81bf-4a7e-bd5d-0afc19696480@b47c0",
       "__expectedType__": "cc.TextureCube"
     },
-    "_diffuseMapHDR": {
-      "__uuid__": "78a4dc43-112f-41c3-ad60-fb683d688082@b47c0",
-      "__expectedType__": "cc.TextureCube"
-    },
+    "_diffuseMapHDR": null,
     "_diffuseMapLDR": null,
     "_enabled": true,
     "_useHDR": true,
