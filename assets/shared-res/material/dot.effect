@@ -1,0 +1,95 @@
+// Copyright (c) 2017-2020 Xiamen Yaji Software Co., Ltd.
+
+CCEffect %{
+  techniques:
+  - passes:
+    - vert: vs
+      frag: fs
+      pass: post-process
+      rasterizerState:
+        cullMode: none
+      depthStencilState:
+        depthTest: false
+        depthWrite: false
+      blendState:
+        targets:
+        - blend: true
+          blendSrc: one
+          blendDst: zero
+      properties:
+        angle: { value: 0, target: params.x }
+        scale: { value: 1, target: params.y }
+}%
+
+
+CCProgram vs %{
+  
+  precision highp float;
+    
+  #include <legacy/decode-standard>
+  #include <builtin/uniforms/cc-global>
+  #include <common/common-define>
+
+  out vec2 v_uv;
+
+  void main () {
+    StandardVertInput In;
+    CCDecode(In);
+    CC_HANDLE_GET_CLIP_FLIP(In.position.xy);
+    gl_Position = In.position;
+
+    v_uv = a_texCoord;
+  }
+
+}%
+
+CCProgram ubo %{
+    uniform PostUBO {
+        vec4 texSize;
+        vec4 params;
+    };
+    #pragma rate inputTexture pass
+    uniform sampler2D inputTexture;
+}%
+
+CCProgram fs %{
+  precision highp float;
+
+  #include <builtin/uniforms/cc-global>
+  #include <legacy/output-standard>
+  #include <unpack>
+
+  in vec2 v_uv;
+  #include <ubo>
+
+  // Ruofei Du
+// Dot Screen / Halftone: https://www.shadertoy.com/view/4sBBDK
+// Halftone: https://www.shadertoy.com/view/lsSfWV
+
+  float greyScale(in vec3 col) {
+      return dot(col, vec3(0.2126, 0.7152, 0.0722));
+  }
+
+  mat2 rotate2d(float angle){
+      return mat2(cos(angle), -sin(angle), sin(angle),cos(angle));
+  }
+
+  float dotScreen(in vec2 uv, in float angle, in float scale) {
+      float s = sin( angle ), c = cos( angle );
+    vec2 p = (uv - vec2(0.5)) * cc_screenSize.xy;
+      vec2 q = rotate2d(angle) * p * scale; 
+    return ( sin( q.x ) * sin( q.y ) ) * 4.0;
+  }
+
+  layout(location = 0) out vec4 fragColor;
+  void main () {
+    vec3 col = texture(inputTexture, v_uv).rgb; 
+    float grey = greyScale(col); 
+    float angle = params.x;
+    float scale = params.y; 
+    col = vec3( grey * 10.0 - 5.0 + dotScreen(v_uv, angle, scale ) );
+    fragColor = vec4( col, 1.0 );
+  }
+  
+}%
+

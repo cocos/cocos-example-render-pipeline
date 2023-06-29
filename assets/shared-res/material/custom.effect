@@ -1,0 +1,83 @@
+// Copyright (c) 2017-2020 Xiamen Yaji Software Co., Ltd.
+
+CCEffect %{
+  techniques:
+  - passes:
+    - vert: vs
+      frag: fs
+      pass: post-process
+      rasterizerState:
+        cullMode: none
+      depthStencilState:
+        depthTest: false
+        depthWrite: false
+      blendState:
+        targets:
+        - blend: true
+          blendSrc: one
+          blendDst: zero
+      properties:
+        intensity: { value: 1, target: params.x }
+        depthRange: { value: 30, target: params.z }
+
+}%
+
+
+CCProgram vs %{
+  
+  precision highp float;
+    
+  #include <legacy/decode-standard>
+  #include <builtin/uniforms/cc-global>
+  #include <common/common-define>
+
+  out vec2 v_uv;
+
+  void main () {
+    StandardVertInput In;
+    CCDecode(In);
+    CC_HANDLE_GET_CLIP_FLIP(In.position.xy);
+    gl_Position = In.position;
+
+    v_uv = a_texCoord;
+  }
+
+}%
+
+CCProgram ubo %{
+    uniform PostUBO {
+        vec4 texSize;
+        vec4 params;
+    };
+    #pragma rate inputTexture pass
+    uniform sampler2D inputTexture;
+    #pragma rate depthTexture pass
+    uniform sampler2D depthTexture;
+}%
+
+CCProgram fs %{
+  precision highp float;
+
+  #include <builtin/uniforms/cc-global>
+  #include <legacy/output-standard>
+  #include <unpack>
+
+  in vec2 v_uv;
+  #include <ubo>
+
+  layout(location = 0) out vec4 fragColor;
+  void main () {
+    if (params.y == 0.) {
+      fragColor = texture(inputTexture, v_uv);
+      
+      fragColor.rgb *= vec3(1., 1., params.x);
+    }
+    else {
+      fragColor = texture(depthTexture, v_uv);
+      fragColor.r = 1. - (1. - fragColor.r) * params.z;
+    }
+  }
+
+  
+}%
+
