@@ -29,11 +29,16 @@ export class CustomPostProcess extends PostProcessSetting {
 
 
 export class CustomPass extends SettingPass {
+    // custom pass name
     name = 'CustomPass'
+
+    // out out slot name
     outputNames: string[] = ['CustomPassColor']
 
+    // reference to post process setting
     get setting () { return this.getSetting(CustomPostProcess); }
 
+    // Whether the pass should rendered
     checkEnable(camera: renderer.scene.Camera): boolean {
         let setting = this.setting;
         return setting.material && super.checkEnable(camera);
@@ -44,32 +49,41 @@ export class CustomPass extends SettingPass {
     render (camera: renderer.scene.Camera, ppl: rendering.Pipeline) {
         const cameraID = this.getCameraUniqueID(camera);
 
+        // clear background to black color 
         let context = this.context;
         context.clearBlack()
 
+        // input name from last pass's output slot 0
         let input0 = this.lastPass.slotName(camera, 0);
-        let output = this.slotName(camera);
+        // output slot 0 name 
+        let output = this.slotName(camera, 0);
 
+        // get depth slot name
+        let depth = context.depthSlotName;
+
+        // also can get depth slot name from forward pass.
+        // let forwardPass = builder.getPass(ForwardPass);
+        // depth = forwardPass.slotName(camera, 1);
+
+        // set setting value to material
         let setting = this.setting;
-        let forwardPass = builder.getPass(ForwardPass);
-        let depth = forwardPass.slotName(camera, 1);
-
         this.params.x = setting.blueIntensity
         this.params.y = setting.showDepth ? 1 : 0;
         this.params.z = setting.depthRange;
         setting.material.setProperty('params', this.params);
 
-        // if (setting.showDepth) {
-        //     input0 = depth;
-        // }
-
         context.material = setting.material;
         context
+            // update view port
             .updatePassViewPort()
+            // add a render pass
             .addRenderPass('post-process', `${this.name}${cameraID}`)
+            // set inputs
             .setPassInput(input0, 'inputTexture')
             .setPassInput(depth, 'depthTexture')
+            // set outputs
             .addRasterView(output, gfx.Format.RGBA8)
+            // blit
             .blitScreen(0)
             .version();
     }
