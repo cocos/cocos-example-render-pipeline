@@ -41,7 +41,7 @@ export class CustomPass extends SettingPass {
     // Whether the pass should rendered
     checkEnable(camera: renderer.scene.Camera): boolean {
         let setting = this.setting;
-        return setting.material && super.checkEnable(camera);
+        return setting && setting.material && super.checkEnable(camera);
     }
 
     params = new Vec4
